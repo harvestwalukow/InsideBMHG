@@ -1,6 +1,5 @@
 import os
 
-os.environ['FLASK_ENV'] = 'development'
 from cs50 import SQL
 from flask import Flask, flash, redirect, render_template, request, session, jsonify
 from flask_session import Session
@@ -142,5 +141,5 @@ def attendance():
     else:
         return render_template("attendance.html")
     
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
