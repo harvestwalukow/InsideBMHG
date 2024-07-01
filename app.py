@@ -1,10 +1,12 @@
 import os
 
+os.environ['FLASK_DEBUG'] = '1'
 from cs50 import SQL
 from flask import Flask, flash, redirect, render_template, request, session, jsonify
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
+import pytz
 
 from helpers import apology, login_required
 
@@ -130,12 +132,20 @@ def attendance():
         user_id = session["user_id"]
         user_lat = request.form.get("user_lat")  # Added hidden input in attendance.html
         user_lon = request.form.get("user_lon")  # Added hidden input in attendance.html
-
-        # Insert into activities table
-        db.execute("INSERT INTO activities (user_id, activity, user_lat, user_lon) VALUES (?, ?, ?, ?)",
-                   user_id, activity, user_lat, user_lon)
         
-        flash(f"Attendance recorded!")
+        # Get current UTC time
+        utc_now = datetime.utcnow()
+
+        # Convert UTC time to Jakarta time (same as Surabaya time)
+        jakarta_tz = pytz.timezone('Asia/Jakarta')
+        jakarta_now = utc_now.replace(tzinfo=pytz.utc).astimezone(jakarta_tz)
+        formatted_time = jakarta_now.strftime("%Y-%m-%d %H:%M:%S")
+
+        # Insert into activities table using timestamp column
+        db.execute("INSERT INTO activities (user_id, activity, timestamp, user_lat, user_lon) VALUES (?, ?, ?, ?, ?)",
+                   user_id, activity, formatted_time, user_lat, user_lon)
+        
+        flash(f"Attendance recorded at {formatted_time}!")
         return redirect("/")
     
     else:
