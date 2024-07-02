@@ -23,19 +23,53 @@
             {% endfor %}
         </tbody>
     </table>
-    <div style="margin-top: 60px;"></div>
 
-    <table class="table">
-        <thead>
-            <tr>
-                <th scope="col">Weekly Percentage</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>{{ weekly_percentage }}</td>
-            </tr>
-        </tbody>
-    </table>
-    
+    <div style="margin-top: 40px;"></div>
+
+    <!-- GAMIFYING -->
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-4">
+                <div class="card bg-light mb-3">
+                    <div class="card-header">📊 Shift Percentage</div>
+                    <div class="card-body">
+                        <div class="progress" role="progressbar" aria-label="Warning example" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">
+                            <div class="progress-bar" style="width: 75%">75%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light mb-3">
+                    <div class="card-header">🏆 Shift Hours Leaderboard</div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <tbody>
+                                <tr>
+                                    <td>Kelvin</td>
+                                    <td>123</td>
+                                </tr>
+                                <tr>
+                                    <td>Devina</td>
+                                    <td>345</td>
+                                </tr>
+                                <tr>
+                                    <td>Zefa</td>
+                                    <td>345</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light mb-3">
+                    <div class="card-header">🔥 Weekly Streak</div>
+                    <div class="card-body">
+                        <p>5</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
