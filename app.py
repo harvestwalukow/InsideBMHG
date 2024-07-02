@@ -5,7 +5,7 @@ from cs50 import SQL
 from flask import Flask, flash, redirect, render_template, request, session, jsonify
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 from helpers import apology, login_required
@@ -29,18 +29,34 @@ def after_request(response):
     response.headers["Pragma"] = "no-cache"
     return response
 
+
 @app.route("/")
 @login_required
 def index():
     # Query activities from database
     activities = db.execute("SELECT activity, timestamp FROM activities WHERE user_id = ?", session["user_id"])
 
-    # Convert timestamp to date and time format
-    for activity in activities:
-        activity["date"] = datetime.strptime(activity["timestamp"], '%Y-%m-%d %H:%M:%S').date()
-        activity["time"] = datetime.strptime(activity["timestamp"], '%Y-%m-%d %H:%M:%S').time()
+    # Calculate the start and end of the current week
+    today = datetime.now().date()
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
 
-    return render_template("index.html", activities=activities)
+    # Filter activities within the current week
+    weekly_activities = [activity for activity in activities if start_of_week <= datetime.strptime(activity["timestamp"], '%Y-%m-%d %H:%M:%S').date() <= end_of_week]
+
+    # Calculate total seconds available for 100% progress (5 hours)
+    total_seconds_for_100_percent = 5 * 3600
+
+    # Calculate total time spent in seconds
+    total_seconds_spent = sum([(datetime.strptime(activity["timestamp"], '%Y-%m-%d %H:%M:%S') - datetime.combine(start_of_week, datetime.min.time())).total_seconds() for activity in weekly_activities])
+
+    # Calculate weekly percentage
+    if total_seconds_for_100_percent > 0:
+        weekly_percentage = (total_seconds_spent / total_seconds_for_100_percent) * 100
+    else:
+        weekly_percentage = 0
+
+    return render_template("index.html", activities=activities, weekly_percentage=weekly_percentage)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
