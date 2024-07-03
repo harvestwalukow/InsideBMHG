@@ -213,6 +213,11 @@ def attendance():
     
     else:
         return render_template("attendance.html")
+    
+@app.route("/admin")
+@login_required
+def admin():
+    return render_template("admin.html")
 
 @app.errorhandler(404)
 def not_found_error(error):
