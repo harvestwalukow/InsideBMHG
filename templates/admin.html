@@ -1,0 +1,76 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Admin
+{% endblock %}
+
+{% block main %}
+    <style>
+        .table td, .table th {
+            vertical-align: middle;
+            text-align: center;
+        }
+    </style>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Week 1</th>
+                    <th>Week 2</th>
+                    <th>Week 3</th>
+                    <th>Week 4</th>
+                    <th>Week 5</th>
+                    <th>Week 6</th>
+                    <th>Week 7</th>
+                    <th>Week 8</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td rowspan="2">User 1</td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                </tr>
+                <tr>
+                    <td rowspan="2">User 2</td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                    <td><input type="checkbox" disabled></td>
+                </tr>
+                <!-- Repeat for additional users -->
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
