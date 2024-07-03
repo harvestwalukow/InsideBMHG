@@ -33,15 +33,77 @@ def after_request(response):
 @app.route("/")
 @login_required
 def index():
-    # Query activities from database
-    activities = db.execute("SELECT activity, timestamp FROM activities WHERE user_id = ?", session["user_id"])
+    # Get current date and the start and end dates for the week
+    today = datetime.today()
+    start_of_week = today - timedelta(days=today.weekday())  # Monday of the current week
+    end_of_week = start_of_week + timedelta(days=4)  # Friday of the current week
 
-    # Convert timestamp to date and time format
+    # Query activities from database for the current week
+    activities = db.execute(
+        "SELECT activity, timestamp FROM activities WHERE user_id = ? AND timestamp BETWEEN ? AND ?",
+        session["user_id"], start_of_week.strftime('%Y-%m-%d'), end_of_week.strftime('%Y-%m-%d')
+    )
+
+    # Process activities to calculate total shift hours for the week
+    shift_hours = 0
+    day_activities = {}
+
     for activity in activities:
-        activity["date"] = datetime.strptime(activity["timestamp"], '%Y-%m-%d %H:%M:%S').date()
-        activity["time"] = datetime.strptime(activity["timestamp"], '%Y-%m-%d %H:%M:%S').time()
+        activity_date = activity["timestamp"].split(' ')[0]
+        activity_time = datetime.strptime(activity["timestamp"], '%Y-%m-%d %H:%M:%S')
 
-    return render_template("index.html", activities=activities)
+        if activity_date not in day_activities:
+            day_activities[activity_date] = []
+        day_activities[activity_date].append((activity["activity"], activity_time))
+
+    for date, acts in day_activities.items():
+        shifts = sorted(acts, key=lambda x: x[1])
+        i = 0
+        while i < len(shifts) - 1:
+            if (shifts[i][0].lower() == 'shift-in' and
+                shifts[i+1][0].lower() == 'shift-out' and
+                shifts[i][1].date() == shifts[i+1][1].date()):
+                shift_hours += (shifts[i+1][1] - shifts[i][1]).seconds / 3600.0
+                i += 2  # Move to the next pair
+            else:
+                i += 1  # Move to the next activity
+
+    shift_percentage = (shift_hours / 5) * 100 if shift_hours <= 5 else 100
+
+    # Query top 3 users by shift hours (all-time)
+    leaderboard = db.execute(
+        "SELECT u.username, SUM((julianday(shift_out.timestamp) - julianday(shift_in.timestamp)) * 24) as hours "
+        "FROM activities AS shift_in "
+        "JOIN activities AS shift_out ON shift_in.user_id = shift_out.user_id AND shift_in.activity = 'Shift-In' "
+        "AND shift_out.activity = 'Shift-Out' AND shift_in.id < shift_out.id "
+        "AND date(shift_in.timestamp) = date(shift_out.timestamp) "
+        "JOIN users u ON shift_in.user_id = u.id "
+        "GROUP BY shift_in.user_id "
+        "ORDER BY hours DESC "
+        "LIMIT 3"
+    )
+
+    # Calculate weekly streak for the user
+    streak_data = db.execute(
+        "SELECT DISTINCT strftime('%W', timestamp) as week FROM activities WHERE user_id = ? AND activity = 'weekly meeting' ORDER BY week",
+        session["user_id"]
+    )
+    current_streak = 0
+
+    if streak_data:
+        expected_week = int(streak_data[0]['week'])
+
+        for record in streak_data:
+            if int(record['week']) == expected_week:
+                current_streak += 1
+                expected_week += 1
+            else:
+                current_streak = 0
+                break
+
+    return render_template("index.html", activities=activities, shift_percentage=shift_percentage, leaderboard=leaderboard, current_streak=current_streak)
+
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -151,6 +213,10 @@ def attendance():
     
     else:
         return render_template("attendance.html")
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return apology("Page doesn't exist.", 404)
     
 if __name__ == "__main__":
     app.run(debug=True)
