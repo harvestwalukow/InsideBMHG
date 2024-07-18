@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Admin Login
+{% endblock %}
+
+{% block main %}
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <form action="/admin" method="post">
+                    <div class="mb-3">
+                        <label for="admin_password" class="form-label">Password:</label>
+                        <input type="password" name="admin_password" id="admin_password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -12,65 +12,37 @@
         }
     </style>
     <div class="table-responsive">
-        <table class="table">
+        <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>Name</th>
-                    <th>Week 1</th>
-                    <th>Week 2</th>
-                    <th>Week 3</th>
-                    <th>Week 4</th>
-                    <th>Week 5</th>
-                    <th>Week 6</th>
-                    <th>Week 7</th>
-                    <th>Week 8</th>
+                    <th>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</th>
+                    {% for week_label in week_labels | reverse %}
+                        <th>{{ week_label }}</th>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    {% for _ in week_labels | reverse %}
+                        <th>Meeting</th>
+                        <th>Shift Hours</th>
+                    {% endfor %}
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td rowspan="2">User 1</td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                </tr>
-                <tr>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                </tr>
-                <tr>
-                    <td rowspan="2">User 2</td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                </tr>
-                <tr>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                    <td><input type="checkbox" disabled></td>
-                </tr>
-                <!-- Repeat for additional users -->
+                {% for username, data in user_data.items() %}
+                    <tr>
+                        <td rowspan="2">{{ username }}</td>
+                        {% for attended in data.attendance %}
+                            <td><input type="checkbox" disabled {% if attended %}checked{% endif %}></td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        {% for shift in data.shift_hours %}
+                            <td><input type="checkbox" disabled {% if shift %}checked{% endif %}></td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
             </tbody>
         </table>
+        <dd class="col-sm-8">Keterangan: baris pertama = weekly, baris kedua = shift</dd>
     </div>
 {% endblock %}
