@@ -14,7 +14,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for activity in activities %}
+            {% for activity in activities_shown %}
             <tr>
                 <td>{{ activity.activity }}</td>
                 <td>{{ activity.timestamp.split(' ')[0] }}</td>
@@ -34,8 +34,8 @@
                     <div class="card-header">📊 Shift Percentage</div>
                     <div class="card-body">
                         <div class="progress" role="progressbar" aria-label="Shift Percentage" aria-valuenow="{{ shift_percentage }}" aria-valuemin="0" aria-valuemax="100">
-                            <div class="progress-bar" style="width: {{ shift_percentage }}%">{{ shift_percentage }}%</div>
-                        </div>
+                            <div class="progress-bar" style="width: {{ shift_percentage }}%">{{ shift_percentage|round(2) }}%</div>
+                        </div>                        
                     </div>
                 </div>
             </div>
@@ -65,5 +65,14 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div style="margin-top: 40px;"></div>
+
+    <div>
+        <div>Sedang shift:</div>
+        {% for username in usernames_shift_in %}
+            {{ username }}{% if not loop.last %}, {% endif %}
+        {% endfor %}
     </div>
 {% endblock %}
