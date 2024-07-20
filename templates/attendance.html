@@ -37,35 +37,40 @@
         }
 
         function validateLocation() {
-            var targetLat = -7.2514;
-            var targetLon = 112.7889;
-            var radius = 3000;
+            var targetLat = -7.251144681273401;
+            var targetLon = 112.7888860846552;
+            var radius = 150;
 
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function(position) {
-                    var userLat = position.coords.latitude;
-                    var userLon = position.coords.longitude;
-                    console.log("User Latitude: " + userLat);
-                    console.log("User Longitude: " + userLon);
-                    var distance = getDistanceFromLatLonInMeters(userLat, userLon, targetLat, targetLon);
-                    console.log("Distance: " + distance + " meters");
-                    if (distance > radius) {
-                        alert("You are not within the allowed location to submit this form.");
-                        return false;
-                    } else {
-                        // Populate hidden inputs with user's coordinates
-                        document.getElementById('user_lat').value = userLat;
-                        document.getElementById('user_lon').value = userLon;
-                        document.getElementById('attendanceForm').submit();
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        var userLat = position.coords.latitude;
+                        var userLon = position.coords.longitude;
+                        console.log("User Latitude: " + userLat);
+                        console.log("User Longitude: " + userLon);
+                        var distance = getDistanceFromLatLonInMeters(userLat, userLon, targetLat, targetLon);
+                        console.log("Distance: " + distance + " meters");
+                        if (distance > radius) {
+                            alert("You are not within the allowed location to submit this form.");
+                        } else {
+                            // Populate hidden inputs with user's coordinates
+                            document.getElementById('user_lat').value = userLat;
+                            document.getElementById('user_lon').value = userLon;
+                            document.getElementById('attendanceForm').submit();
+                        }
+                    },
+                    function(error) {
+                        console.error("Geolocation error: " + error.message);
+                        alert("Geolocation is not supported by this browser or permission denied.");
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0
                     }
-                }, function(error) {
-                    console.error("Geolocation error: " + error.message);
-                    alert("Geolocation is not supported by this browser or permission denied.");
-                    return false;
-                });
+                );
             } else {
                 alert("Geolocation is not supported by this browser.");
-                return false;
             }
 
             return false; // Prevent form submission until geolocation check is done
