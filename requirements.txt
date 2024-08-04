@@ -1,7 +1,6 @@
 cs50==9.3.4
 Flask==2.2.2
 flask_session==0.8.0
-pytz==2023.3.post1
-pytz==2022.7
+pytz
 Requests==2.32.3
 Werkzeug==2.2.3
