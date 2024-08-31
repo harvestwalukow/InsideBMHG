@@ -1,93 +1,136 @@
 {% extends "layout.html" %}
-
-{% block title %}
-    Admin
-{% endblock %}
-
+{% block title %} Admin {% endblock %}
 {% block main %}
-    <style>
-        .table td, .table th {
-            vertical-align: middle;
-            text-align: center;
-        }
-
-        /* Hide the default checkbox */
-        input[type="checkbox"] {
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #ccc;
-            background-color: white;
-            cursor: pointer;
-            position: relative;
-            display: inline-block;
-        }
-
-        /* Custom checked state */
-        input[type="checkbox"]:checked {
-            background-color: #4caf50;
-            border-color: #4caf50;
-        }
-
-        /* Add checkmark when checked */
-        input[type="checkbox"]:checked::after {
-            content: "";
-            position: absolute;
-            left: 4px;
-            top: 2px;
-            width: 6px;
-            height: 12px;
-            border: solid white;
-            border-width: 0 2px 2px 0;
-            transform: translate(15%, -10%) rotate(45deg);        }
-
-        /* Disabled checkbox styling */
-        input[type="checkbox"]:disabled {
-            background-color: #ccc;
-            border-color: #ccc;
-            cursor: not-allowed;
-        }
-
-        input[type="checkbox"]:disabled:checked {
-            background-color: #4caf50;
-            border-color: #4caf50;
-        }
-
-    </style>
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</th>
-                    {% for week_label in week_labels | reverse %}
-                        <th>{{ week_label }}</th>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    {% for _ in week_labels | reverse %}
-                        <th>Meeting</th>
-                        <th>Shift Hours</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for username, data in user_data.items() %}
-                    <tr>
-                        <td rowspan="2">{{ username }}</td>
-                        {% for attended in data.attendance %}
-                            <td><input type="checkbox" disabled {% if attended %}checked{% endif %}></td>
-                        {% endfor %}
-                    </tr>
-                    <tr>
-                        {% for shift in data.shift_hours %}
-                            <td><input type="checkbox" disabled {% if shift %}checked{% endif %}></td>
-                        {% endfor %}
-                    </tr>
+<style>
+    .table td, .table th {
+        vertical-align: middle;
+        text-align: center;
+    }
+    /* Hide the default checkbox */
+    input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        width: 20px;
+        height: 20px;
+        border: 2px solid #ccc;
+        background-color: white;
+        cursor: pointer;
+        position: relative;
+        display: inline-block;
+    }
+    /* Custom checked state */
+    input[type="checkbox"]:checked {
+        background-color: #4caf50;
+        border-color: #4caf50;
+    }
+    /* Add checkmark when checked */
+    input[type="checkbox"]:checked::after {
+        content: "";
+        position: absolute;
+        left: 4px;
+        top: 2px;
+        width: 6px;
+        height: 12px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: translate(15%, -10%) rotate(45deg);
+    }
+    /* Disabled checkbox styling */
+    input[type="checkbox"]:disabled {
+        background-color: #ccc;
+        border-color: #ccc;
+        cursor: not-allowed;
+    }
+    input[type="checkbox"]:disabled:checked {
+        background-color: #4caf50;
+        border-color: #4caf50;
+    }
+</style>
+<div class="table-responsive">
+    <button onclick="downloadCSV()" class="btn btn-primary mb-3">Download CSV</button>
+    <div style="margin-top: 40px;"></div>
+    <table class="table table-striped" id="adminTable">
+        <thead>
+            <tr>
+                <th>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</th>
+                {% for week_label in week_labels | reverse %}
+                <th>{{ week_label }}</th>
                 {% endfor %}
-            </tbody>
-        </table>
-        <dd class="col-sm-8">Keterangan: baris pertama = weekly, baris kedua = shift</dd>
-    </div>
+            </tr>
+            <tr>
+                {% for _ in week_labels | reverse %}
+                <th>Meeting</th>
+                <th>Shift Hours</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for username, data in user_data.items() %}
+            <tr>
+                <td rowspan="2">{{ username }}</td>
+                {% for attended in data.attendance %}
+                <td><input type="checkbox" disabled {% if attended %}checked{% endif %}></td>
+                {% endfor %}
+            </tr>
+            <tr>
+                {% for shift in data.shift_hours %}
+                <td><input type="checkbox" disabled {% if shift %}checked{% endif %}></td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <dd class="col-sm-8">Keterangan: baris pertama = weekly, baris kedua = shift</dd>
+</div>
+
+<script>
+function downloadCSV() {
+    const table = document.getElementById('adminTable');
+    let csv = [];
+    
+    // Get all rows from the table
+    const rows = table.querySelectorAll('tr');
+    
+    // Iterate through rows
+    for (let i = 0; i < rows.length; i++) {
+        const row = [], cols = rows[i].querySelectorAll('td, th');
+        
+        // Iterate through columns
+        for (let j = 0; j < cols.length; j++) {
+            // Get the text content of the cell
+            let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, '').replace(/(\s\s)/gm, ' ').trim();
+            
+            // If it's a checkbox, get its checked state
+            const checkbox = cols[j].querySelector('input[type="checkbox"]');
+            if (checkbox) {
+                data = checkbox.checked ? 'Yes' : 'No';
+            }
+            
+            // Escape double quotes and wrap the data in quotes
+            data = data.replace(/"/g, '""');
+            row.push('"' + data + '"');
+        }
+        csv.push(row.join(','));
+    }
+    
+    // Combine the rows into a single string
+    const csvString = csv.join('\n');
+    
+    // Create a Blob with the CSV data
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    
+    // Create a link element to trigger the download
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'admin_table.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+}
+</script>
 {% endblock %}

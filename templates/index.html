@@ -8,7 +8,10 @@
     <table class="table">
         <thead>
             <tr>
-                <th scope="col">Activity</th>
+                <th scope="col">
+                    Activity
+                    <span class="{{ badge_class }}"> </span>
+                </th>
                 <th scope="col">Date</th>
                 <th scope="col">Time</th>
             </tr>
@@ -29,7 +32,48 @@
     <!-- GAMIFYING -->
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-4">
+            <!-- Dropdown view for mobile -->
+            <div class="col-md-4 d-md-none">
+                <div class="card bg-light mb-3">
+                    <div class="card-header">
+                        <select id="tableSelector" class="form-select">
+                            <option value="shiftPercentage">📊 Shift Percentage</option>
+                            <option value="leaderboard">🏆 Shift Hours Leaderboard</option>
+                            <option value="weeklyStreak">🔥 Weekly Streak</option>
+                        </select>
+                    </div>
+                    <div class="card-body">
+                        <!-- Shift Percentage -->
+                        <div id="shiftPercentage" class="table-content">
+                            <div class="progress" role="progressbar" aria-label="Shift Percentage" aria-valuenow="{{ shift_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                                <div class="progress-bar" style="width: {{ shift_percentage }}%">{{ shift_percentage|int }}%</div>
+                            </div>
+                        </div>
+
+                        <!-- Shift Hours Leaderboard -->
+                        <div id="leaderboard" class="table-content" style="display: none;">
+                            <table class="table table-striped">
+                                <tbody>
+                                    {% for user in leaderboard %}
+                                    <tr>
+                                        <td>{{ user.username }}</td>
+                                        <td>{{ user.hours|int }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Weekly Streak -->
+                        <div id="weeklyStreak" class="table-content" style="display: none;">
+                            <p>{{ current_streak }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Original view for larger screens -->
+            <div class="col-md-4 d-none d-md-block">
                 <div class="card bg-light mb-3">
                     <div class="card-header">📊 Shift Percentage</div>
                     <div class="card-body">
@@ -39,7 +83,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-4 d-none d-md-block">
                 <div class="card bg-light mb-3">
                     <div class="card-header">🏆 Shift Hours Leaderboard</div>
                     <div class="card-body">
@@ -56,7 +100,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-4 d-none d-md-block">
                 <div class="card bg-light mb-3">
                     <div class="card-header">🔥 Weekly Streak</div>
                     <div class="card-body">
@@ -69,10 +113,23 @@
 
     <div style="margin-top: 40px;"></div>
 
+    {% if usernames_shift_in %}
     <div>
         <div>Sedang shift:</div>
         {% for username in usernames_shift_in %}
             {{ username }}{% if not loop.last %}, {% endif %}
         {% endfor %}
     </div>
+{% endif %}
+
+
+    <script>
+        document.getElementById('tableSelector').addEventListener('change', function() {
+            var selectedTable = this.value;
+            document.querySelectorAll('.table-content').forEach(function(content) {
+                content.style.display = 'none';
+            });
+            document.getElementById(selectedTable).style.display = 'block';
+        });
+    </script>
 {% endblock %}
