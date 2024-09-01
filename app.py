@@ -1,30 +1,41 @@
+# Library standar
 import os
+from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
-os.environ['FLASK_DEBUG'] = '1'
+# Library pihak ketiga
+import pytz
 from cs50 import SQL
-from flask import Flask, flash, redirect, render_template, request, session, jsonify
+from flask import Flask, flash, redirect, render_template, request, session
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
-from datetime import datetime, timedelta
-import pytz
 
-from helpers import apology, login_required
+# Library lokal
+from helpers import apology, login_required, clear_unmatched_shift_ins, calculate_shift_hours, calculate_total_shift_hours, check_weekly_attendance, calculate_current_streak
 
-# Configure application
+# Hot Reload
+os.environ['FLASK_DEBUG'] = '1'
+
+# Konfigurasi nama aplikasi
 app = Flask(__name__)
-application = app
 
+# Keperluan hosting
+application = app
 
 # Configure session to use filesystem (instead of signed cookies)
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-ADMIN_PASSWORD = "Admin#1234"
+# Password admin
+load_dotenv() 
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
-# Configure CS50 Library to use SQLite database
+# Konfigurasi Library CS50 untuk akses database SQLite
 db = SQL("sqlite:///bmhg.db")
 
+
+# Fungsi after_request ini mencegah caching dari respon HTTP oleh browser atau proxy
 @app.after_request
 def after_request(response):
     """Ensure responses aren't cached"""
@@ -32,28 +43,6 @@ def after_request(response):
     response.headers["Expires"] = 0
     response.headers["Pragma"] = "no-cache"
     return response
-
-def clear_unmatched_shift_ins():
-    jakarta_tz = pytz.timezone('Asia/Jakarta')
-    now = datetime.now(jakarta_tz)
-    reset_time = now.replace(hour=23, minute=59, second=0, microsecond=0)
-    
-    # Check if the current time is exactly or after 01:00 AM WIB
-    if now >= reset_time:
-        # Find Shift-In entries that do not have a corresponding Shift-Out
-        unmatched_shift_ins = db.execute("""
-            SELECT a1.id FROM activities a1
-            LEFT JOIN activities a2 ON a1.user_id = a2.user_id
-                                     AND a2.activity = 'Shift-Out'
-                                     AND a2.timestamp > a1.timestamp
-            WHERE a1.activity = 'Shift-In' AND a2.id IS NULL
-        """)
-
-        # Delete unmatched Shift-In entries
-        if unmatched_shift_ins:
-            shift_in_ids = [entry['id'] for entry in unmatched_shift_ins]
-            db.execute("DELETE FROM activities WHERE id IN (?)", shift_in_ids)
-            print(f"Deleted {len(shift_in_ids)} unmatched Shift-In entries.")
 
 
 @app.route("/")
@@ -148,107 +137,6 @@ def index():
                            current_streak=current_streak, badge_class=badge_class,
                            usernames_shift_in=usernames_shift_in)
 
-def calculate_shift_hours(activities, start_date, end_date):
-    shift_hours = 0
-    day_activities = {}
-
-    for activity in activities:
-        activity_time = datetime.strptime(activity["timestamp"], '%Y-%m-%d %H:%M:%S')
-        if start_date <= activity_time <= end_date and activity["activity"] in ["Shift-In", "Shift-Out"]:
-            activity_date = activity_time.date()
-            if activity_date not in day_activities:
-                day_activities[activity_date] = []
-            day_activities[activity_date].append((activity["activity"], activity_time))
-    
-    for date, acts in day_activities.items():
-        shifts = sorted(acts, key=lambda x: x[1])
-        i = 0
-        while i < len(shifts) - 1:
-            if (shifts[i][0] == 'Shift-In' and
-                shifts[i + 1][0] == 'Shift-Out' and
-                shifts[i][1].date() == shifts[i + 1][1].date()):
-                shift_hours += (shifts[i + 1][1] - shifts[i][1]).seconds / 3600.0
-                i += 2
-            else:
-                i += 1
-
-    return round(shift_hours, 2)
-
-def calculate_total_shift_hours(activities):
-    total_shift_hours = 0
-    day_activities = {}
-
-    for activity in activities:
-        activity_time = datetime.strptime(activity["timestamp"], '%Y-%m-%d %H:%M:%S')
-        if activity["activity"] in ["Shift-In", "Shift-Out"]:
-            activity_date = activity_time.date()
-            if activity_date not in day_activities:
-                day_activities[activity_date] = []
-            day_activities[activity_date].append((activity["activity"], activity_time))
-
-    for date, acts in day_activities.items():
-        shifts = sorted(acts, key=lambda x: x[1])
-        i = 0
-        while i < len(shifts) - 1:
-            if (shifts[i][0] == 'Shift-In' and
-                shifts[i + 1][0] == 'Shift-Out' and
-                shifts[i][1].date() == shifts[i + 1][1].date()):
-                total_shift_hours += (shifts[i + 1][1] - shifts[i][1]).seconds / 3600.0
-                i += 2
-            else:
-                i += 1
-
-    return round(total_shift_hours, 2)
-
-def check_weekly_attendance(activities, start_date, end_date):
-    for activity in activities:
-        activity_time = datetime.strptime(activity["timestamp"], '%Y-%m-%d %H:%M:%S')
-        if start_date <= activity_time <= end_date and activity["activity"] == 'Weekly Meeting':
-            return True
-    return False
-
-def calculate_current_streak(streak_data, user_id):
-    streaks = {}
-    for record in streak_data:
-        if record['user_id'] not in streaks:
-            streaks[record['user_id']] = []
-        streaks[record['user_id']].append((int(record['year']), int(record['week'])))
-
-    user_streaks = streaks.get(user_id, [])
-    if user_streaks:
-        longest_streak = 1
-        current_streak = 1
-        for i in range(1, len(user_streaks)):
-            prev_year, prev_week = user_streaks[i-1]
-            curr_year, curr_week = user_streaks[i]
-            if (curr_year == prev_year and curr_week == prev_week + 1) or (curr_year == prev_year + 1 and prev_week == 52 and curr_week == 0):
-                current_streak += 1
-                longest_streak = max(longest_streak, current_streak)
-            else:
-                current_streak = 1
-
-        return longest_streak
-    return 0
-
-def clear_unmatched_shift_ins():
-    jakarta_tz = pytz.timezone('Asia/Jakarta')
-    now = datetime.now(jakarta_tz)
-    reset_time = now.replace(hour=23, minute=59, second=0, microsecond=0)
-    
-    if now >= reset_time:
-        unmatched_shift_ins = db.execute("""
-            SELECT a1.id FROM activities a1
-            LEFT JOIN activities a2 ON a1.user_id = a2.user_id
-                                     AND a2.activity = 'Shift-Out'
-                                     AND a2.timestamp > a1.timestamp
-            WHERE a1.activity = 'Shift-In' AND a2.id IS NULL
-        """)
-
-        if unmatched_shift_ins:
-            shift_in_ids = [entry['id'] for entry in unmatched_shift_ins]
-            db.execute("DELETE FROM activities WHERE id IN (?)", shift_in_ids)
-            print(f"Deleted {len(shift_in_ids)} unmatched Shift-In entries.")
-
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -288,6 +176,7 @@ def login():
     else:
         return render_template("login.html")
 
+
 @app.route("/logout")
 def logout():
     """Log user out"""
@@ -297,6 +186,7 @@ def logout():
 
     # Redirect user to login form
     return redirect("/")
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -363,6 +253,7 @@ def attendance():
     else:
         return render_template("attendance.html")
     
+
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
     if request.method == "POST":
@@ -480,6 +371,7 @@ def change_password():
 @app.errorhandler(404)
 def not_found_error(error):
     return apology("Page doesn't exist.", 404)
-    
+
+
 if __name__ == "__main__":
     app.run(debug=True)
