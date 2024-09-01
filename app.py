@@ -7,8 +7,6 @@ from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime, timedelta
 import pytz
-import csv
-import io
 
 from helpers import apology, login_required
 
@@ -22,7 +20,7 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-ADMIN_PASSWORD = "Admin#1234"  # Change this to your desired admin password
+ADMIN_PASSWORD = "Admin#1234"
 
 # Configure CS50 Library to use SQLite database
 db = SQL("sqlite:///bmhg.db")
@@ -73,6 +71,20 @@ def index():
         session["user_id"]
     )
 
+    users_shift_in = db.execute(
+        """
+        SELECT u.username FROM users u
+        JOIN activities a1 ON u.id = a1.user_id
+        LEFT JOIN activities a2 ON u.id = a2.user_id 
+                                AND a2.activity = 'Shift-Out' 
+                                AND a2.timestamp > a1.timestamp
+        WHERE a1.activity = 'Shift-In' 
+        AND a2.id IS NULL
+        """
+    )
+
+    usernames_shift_in = [user["username"] for user in users_shift_in]
+
     today = datetime.now()
     start_of_this_week = (today - timedelta(days=today.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
     end_of_this_week = (start_of_this_week + timedelta(days=4)).replace(hour=23, minute=59, second=59, microsecond=999999)
@@ -93,7 +105,6 @@ def index():
         else:
             badge_class = "badge rounded-pill text-bg-warning"
 
-
     shift_percentage = min((shift_hours_this_week / 5) * 100, 100)
 
     users = db.execute("SELECT id, username FROM users")
@@ -107,7 +118,7 @@ def index():
             user_id
         )
 
-        total_shift_hours = calculate_shift_hours(user_activities, start_of_this_week, end_of_this_week)
+        total_shift_hours = calculate_total_shift_hours(user_activities)
         user_shift_hours[user["username"]] = total_shift_hours
 
     top_users = sorted(user_shift_hours.items(), key=lambda x: x[1], reverse=True)[:3]
@@ -130,45 +141,7 @@ def index():
         """
     )
 
-    current_streak = 0
-    if streak_data:
-        streaks = {}
-        for record in streak_data:
-            user_id = record['user_id']
-            year = int(record['year'])
-            week = int(record['week'])
-            if user_id not in streaks:
-                streaks[user_id] = []
-            streaks[user_id].append((year, week))
-
-        user_streaks = streaks.get(session["user_id"], [])
-        if user_streaks:
-            longest_streak = 1
-            current_streak = 1
-            for i in range(1, len(user_streaks)):
-                prev_year, prev_week = user_streaks[i-1]
-                curr_year, curr_week = user_streaks[i]
-                if (curr_year == prev_year and curr_week == prev_week + 1) or (curr_year == prev_year + 1 and prev_week == 52 and curr_week == 0):
-                    current_streak += 1
-                    longest_streak = max(longest_streak, current_streak)
-                else:
-                    current_streak = 1
-
-            current_streak = longest_streak
-
-    users_shift_in = db.execute(
-        """
-        SELECT u.username FROM users u
-        JOIN activities a1 ON u.id = a1.user_id
-        LEFT JOIN activities a2 ON u.id = a2.user_id 
-                                AND a2.activity = 'Shift-Out' 
-                                AND a2.timestamp > a1.timestamp
-        WHERE a1.activity = 'Shift-In' 
-        AND a2.id IS NULL
-        """
-    )
-
-    usernames_shift_in = [user["username"] for user in users_shift_in]
+    current_streak = calculate_current_streak(streak_data, session["user_id"])
 
     return render_template("index.html", activities_shown=activities_shown, activities=activities, 
                            shift_percentage=shift_percentage, leaderboard=leaderboard, 
@@ -198,7 +171,34 @@ def calculate_shift_hours(activities, start_date, end_date):
                 i += 2
             else:
                 i += 1
-    return shift_hours
+
+    return round(shift_hours, 2)
+
+def calculate_total_shift_hours(activities):
+    total_shift_hours = 0
+    day_activities = {}
+
+    for activity in activities:
+        activity_time = datetime.strptime(activity["timestamp"], '%Y-%m-%d %H:%M:%S')
+        if activity["activity"] in ["Shift-In", "Shift-Out"]:
+            activity_date = activity_time.date()
+            if activity_date not in day_activities:
+                day_activities[activity_date] = []
+            day_activities[activity_date].append((activity["activity"], activity_time))
+
+    for date, acts in day_activities.items():
+        shifts = sorted(acts, key=lambda x: x[1])
+        i = 0
+        while i < len(shifts) - 1:
+            if (shifts[i][0] == 'Shift-In' and
+                shifts[i + 1][0] == 'Shift-Out' and
+                shifts[i][1].date() == shifts[i + 1][1].date()):
+                total_shift_hours += (shifts[i + 1][1] - shifts[i][1]).seconds / 3600.0
+                i += 2
+            else:
+                i += 1
+
+    return round(total_shift_hours, 2)
 
 def check_weekly_attendance(activities, start_date, end_date):
     for activity in activities:
@@ -207,6 +207,47 @@ def check_weekly_attendance(activities, start_date, end_date):
             return True
     return False
 
+def calculate_current_streak(streak_data, user_id):
+    streaks = {}
+    for record in streak_data:
+        if record['user_id'] not in streaks:
+            streaks[record['user_id']] = []
+        streaks[record['user_id']].append((int(record['year']), int(record['week'])))
+
+    user_streaks = streaks.get(user_id, [])
+    if user_streaks:
+        longest_streak = 1
+        current_streak = 1
+        for i in range(1, len(user_streaks)):
+            prev_year, prev_week = user_streaks[i-1]
+            curr_year, curr_week = user_streaks[i]
+            if (curr_year == prev_year and curr_week == prev_week + 1) or (curr_year == prev_year + 1 and prev_week == 52 and curr_week == 0):
+                current_streak += 1
+                longest_streak = max(longest_streak, current_streak)
+            else:
+                current_streak = 1
+
+        return longest_streak
+    return 0
+
+def clear_unmatched_shift_ins():
+    jakarta_tz = pytz.timezone('Asia/Jakarta')
+    now = datetime.now(jakarta_tz)
+    reset_time = now.replace(hour=23, minute=59, second=0, microsecond=0)
+    
+    if now >= reset_time:
+        unmatched_shift_ins = db.execute("""
+            SELECT a1.id FROM activities a1
+            LEFT JOIN activities a2 ON a1.user_id = a2.user_id
+                                     AND a2.activity = 'Shift-Out'
+                                     AND a2.timestamp > a1.timestamp
+            WHERE a1.activity = 'Shift-In' AND a2.id IS NULL
+        """)
+
+        if unmatched_shift_ins:
+            shift_in_ids = [entry['id'] for entry in unmatched_shift_ins]
+            db.execute("DELETE FROM activities WHERE id IN (?)", shift_in_ids)
+            print(f"Deleted {len(shift_in_ids)} unmatched Shift-In entries.")
 
 
 @app.route("/login", methods=["GET", "POST"])

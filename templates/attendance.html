@@ -36,12 +36,10 @@
             return d;
         }
 
-        <!-- Radius elum diganti-->
-
         function validateLocation() {
             var targetLat = -7.251144681273401;
             var targetLon = 112.7888860846552;
-            var radius = 10000;
+            var radius = 150;
 
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
