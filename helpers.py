@@ -58,7 +58,7 @@ def clear_unmatched_shift_ins():
     now = datetime.now(jakarta_tz)
     reset_time = now.replace(hour=23, minute=59, second=0, microsecond=0)
     
-    # Check if the current time is exactly or after 01:00 AM WIB
+    # Check if the current time is exactly or after 23:59 PM WIB
     if now >= reset_time:
         # Find Shift-In entries that do not have a corresponding Shift-Out
         unmatched_shift_ins = db.execute("""

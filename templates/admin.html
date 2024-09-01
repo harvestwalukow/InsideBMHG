@@ -1,55 +1,15 @@
 {% extends "layout.html" %}
-{% block title %} Admin {% endblock %}
+
+{% block title %}
+    Admin 
+{% endblock %}
+
 {% block main %}
-<style>
-    .table td, .table th {
-        vertical-align: middle;
-        text-align: center;
-    }
-    /* Hide the default checkbox */
-    input[type="checkbox"] {
-        appearance: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        width: 20px;
-        height: 20px;
-        border: 2px solid #ccc;
-        background-color: white;
-        cursor: pointer;
-        position: relative;
-        display: inline-block;
-    }
-    /* Custom checked state */
-    input[type="checkbox"]:checked {
-        background-color: #4caf50;
-        border-color: #4caf50;
-    }
-    /* Add checkmark when checked */
-    input[type="checkbox"]:checked::after {
-        content: "";
-        position: absolute;
-        left: 4px;
-        top: 2px;
-        width: 6px;
-        height: 12px;
-        border: solid white;
-        border-width: 0 2px 2px 0;
-        transform: translate(15%, -10%) rotate(45deg);
-    }
-    /* Disabled checkbox styling */
-    input[type="checkbox"]:disabled {
-        background-color: #ccc;
-        border-color: #ccc;
-        cursor: not-allowed;
-    }
-    input[type="checkbox"]:disabled:checked {
-        background-color: #4caf50;
-        border-color: #4caf50;
-    }
-</style>
 <div class="table-responsive">
+    <!-- Tombol download -->
     <button onclick="downloadCSV()" class="btn btn-primary mb-3">Download CSV</button>
     <div style="margin-top: 40px;"></div>
+    <!-- Tabel rekap -->
     <table class="table table-striped" id="adminTable">
         <thead>
             <tr>
@@ -84,6 +44,7 @@
     <dd class="col-sm-8">Keterangan: baris pertama = weekly, baris kedua = shift</dd>
 </div>
 
+<!-- JS buat download -->
 <script>
 function downloadCSV() {
     const table = document.getElementById('adminTable');

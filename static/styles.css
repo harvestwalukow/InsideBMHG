@@ -2,28 +2,55 @@ body, h1, h2, h3, h4, h5, h6, p, a, ul, ol, li {
     font-family: 'Montserrat', sans-serif;
 }
 
-/* Size for brand */
+/* Style for layout*/
 nav .navbar-brand
 {
     font-size: 30px;
 }
 
-/* Colors for brand */
 nav .navbar-brand .blue
 {
     color: #031025;
 }
-nav .navbar-brand .red
-{
-    color: #ea433b;
+
+#main-nav {
+    transition: all 0.3s ease;
 }
-nav .navbar-brand .yellow
-{
-    color: #f5b82e;
+
+#main-nav.scrolled {
+    padding-top: 0;
+    padding-bottom: 0;
 }
-nav .navbar-brand .green
-{
-    color: #2e944b;
+
+#main-nav.scrolled #brand span,
+#main-nav.scrolled #brand img {
+    display: none;
+}
+
+#main-nav.scrolled #brand::after {
+    content: 'InsideBMHG';
+    font-weight: bold;
+}
+
+body {
+    padding-top: 70px;
+}
+
+#main-nav.scrolled .navbar-collapse.show,
+#main-nav.scrolled .navbar-collapse.collapsing {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+#main-nav.scrolled .navbar-collapse.show .navbar-nav,
+#main-nav.scrolled .navbar-collapse.collapsing .navbar-nav {
+    display: flex !important;
+    flex-direction: column;
 }
 
 /* Style for attendance */
@@ -37,7 +64,7 @@ nav .navbar-brand .green
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    padding-right: 34px; /* space for chevron */
+    padding-right: 34px;
     background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/></svg>') no-repeat right 10px center;
     background-size: 16px 16px;
 }
@@ -47,5 +74,53 @@ nav .navbar-brand .green
     margin-left: 80px;
 }
 
+/* Style for admin dashboard */
+.table td, .table th {
+    vertical-align: middle;
+    text-align: center;
+}
 
+/* Hide the default checkbox */
+input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ccc;
+    background-color: white;
+    cursor: pointer;
+    position: relative;
+    display: inline-block;
+}
 
+/* Custom checked state */
+input[type="checkbox"]:checked {
+    background-color: #4caf50;
+    border-color: #4caf50;
+}
+
+/* Add checkmark when checked */
+input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 2px;
+    width: 6px;
+    height: 12px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: translate(15%, -10%) rotate(45deg);
+}
+
+/* Disabled checkbox styling */
+input[type="checkbox"]:disabled {
+    background-color: #ccc;
+    border-color: #ccc;
+    cursor: not-allowed;
+}
+
+input[type="checkbox"]:disabled:checked {
+    background-color: #4caf50;
+    border-color: #4caf50;
+}

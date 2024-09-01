@@ -48,6 +48,7 @@ def after_request(response):
 @app.route("/")
 @login_required
 def index():
+    
     clear_unmatched_shift_ins()
 
     activities_shown = db.execute(
