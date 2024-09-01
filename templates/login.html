@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block main %}
+    <!-- Form login -->
     <form action="/login" method="post">
         <div class="mb-3">
             <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="username" placeholder="Username" type="text">
@@ -17,6 +18,7 @@
     
     <div style="margin-top: 40px;"></div>
 
+    <!-- Button akses admin -->
     <div>
         <button class="btn btn-secondary"><a class="nav-link" href="/admin"><small>Admin Access</small></a></button>
     </div>

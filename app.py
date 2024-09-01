@@ -1,17 +1,25 @@
+# Library standar
 import os
+from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
-os.environ['FLASK_DEBUG'] = '1'
+# Library pihak ketiga
+import pytz
 from cs50 import SQL
-from flask import Flask, flash, redirect, render_template, request, session, jsonify
+from flask import Flask, flash, redirect, render_template, request, session
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
-from datetime import datetime, timedelta
-import pytz
 
-from helpers import apology, login_required
+# Library lokal
+from helpers import apology, login_required, clear_unmatched_shift_ins, calculate_shift_hours, calculate_total_shift_hours, check_weekly_attendance, calculate_current_streak
 
-# Configure application
+# Hot Reload
+os.environ['FLASK_DEBUG'] = '1'
+
+# Konfigurasi nama aplikasi
 app = Flask(__name__)
+
+# Keperluan hosting
 application = app
 
 # Configure session to use filesystem (instead of signed cookies)
@@ -19,11 +27,15 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-ADMIN_PASSWORD = "Admin#1234"  # Change this to your desired admin password
+# Password admin
+load_dotenv() 
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
-# Configure CS50 Library to use SQLite database
+# Konfigurasi Library CS50 untuk akses database SQLite
 db = SQL("sqlite:///bmhg.db")
 
+
+# Fungsi after_request ini mencegah caching dari respon HTTP oleh browser atau proxy
 @app.after_request
 def after_request(response):
     """Ensure responses aren't cached"""
@@ -36,7 +48,9 @@ def after_request(response):
 @app.route("/")
 @login_required
 def index():
-    # Query all activities from the database
+    
+    clear_unmatched_shift_ins()
+
     activities_shown = db.execute(
         "SELECT activity, timestamp FROM activities WHERE user_id = ? ORDER BY timestamp DESC LIMIT 5",
         session["user_id"]
@@ -47,7 +61,6 @@ def index():
         session["user_id"]
     )
 
-    # Query users who are currently Shift-In but not yet Shift-Out
     users_shift_in = db.execute(
         """
         SELECT u.username FROM users u
@@ -62,48 +75,28 @@ def index():
 
     usernames_shift_in = [user["username"] for user in users_shift_in]
 
-    # Process activities to calculate total shift hours for the week
-    shift_hours = 0
-    day_activities = {}
-
-    # Define the start and end of the current week (Monday to Friday)
     today = datetime.now()
-    start_of_week = (today - timedelta(days=today.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)  # Monday
-    end_of_week = (start_of_week + timedelta(days=4)).replace(hour=23, minute=59, second=59, microsecond=999999)  # Friday
+    start_of_this_week = (today - timedelta(days=today.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_this_week = (start_of_this_week + timedelta(days=4)).replace(hour=23, minute=59, second=59, microsecond=999999)
+    start_of_last_week = start_of_this_week - timedelta(days=7)
+    end_of_last_week = end_of_this_week - timedelta(days=7)
 
-    print(f"Start of week: {start_of_week}")
-    print(f"End of week: {end_of_week}")
+    shift_hours_this_week = calculate_shift_hours(activities, start_of_this_week, end_of_this_week)
+    shift_hours_last_week = calculate_shift_hours(activities, start_of_last_week, end_of_last_week)
 
-    # Filter activities within the current week
-    for activity in activities:
-        activity_time = datetime.strptime(activity["timestamp"], '%Y-%m-%d %H:%M:%S')
-        if start_of_week <= activity_time <= end_of_week and activity["activity"] in ["Shift-In", "Shift-Out"]:
-            activity_date = activity_time.date()
-            if activity_date not in day_activities:
-                day_activities[activity_date] = []
-            day_activities[activity_date].append((activity["activity"], activity_time))
-    
-    print(f"Filtered activities: {day_activities}")
+    if shift_hours_last_week < 5 or not check_weekly_attendance(activities, start_of_last_week, end_of_last_week):
+        badge_class = "badge rounded-pill text-bg-warning"
+    else:
+        badge_class = "badge rounded-pill text-bg-success"
 
-    # Calculate shift hours
-    for date, acts in day_activities.items():
-        shifts = sorted(acts, key=lambda x: x[1])
-        i = 0
-        while i < len(shifts) - 1:
-            if (shifts[i][0] == 'Shift-In' and
-                shifts[i + 1][0] == 'Shift-Out' and
-                shifts[i][1].date() == shifts[i + 1][1].date()):
-                shift_hours += (shifts[i + 1][1] - shifts[i][1]).seconds / 3600.0
-                i += 2  # Move to the next pair
-            else:
-                i += 1  # Move to the next activity
+    if shift_hours_this_week < 5 or not check_weekly_attendance(activities, start_of_this_week, end_of_this_week):
+        if shift_hours_last_week < 5 or not check_weekly_attendance(activities, start_of_last_week, end_of_last_week):
+            badge_class = "badge rounded-pill text-bg-danger"
+        else:
+            badge_class = "badge rounded-pill text-bg-warning"
 
-    print(f"Total shift hours: {shift_hours}")
+    shift_percentage = min((shift_hours_this_week / 5) * 100, 100)
 
-    shift_percentage = min((shift_hours / 5) * 100, 100)
-    print(f"Shift percentage: {shift_percentage}")
-
-    # Query all users
     users = db.execute("SELECT id, username FROM users")
 
     user_shift_hours = {}
@@ -115,39 +108,12 @@ def index():
             user_id
         )
 
-        # Calculate total shift hours for the user
-        total_shift_hours = 0
-        user_day_activities = {}
-
-        for activity in user_activities:
-            activity_time = datetime.strptime(activity["timestamp"], '%Y-%m-%d %H:%M:%S')
-            if activity["activity"] in ["Shift-In", "Shift-Out"]:
-                activity_date = activity_time.date()
-                if activity_date not in user_day_activities:
-                    user_day_activities[activity_date] = []
-                user_day_activities[activity_date].append((activity["activity"], activity_time))
-
-        for date, acts in user_day_activities.items():
-            shifts = sorted(acts, key=lambda x: x[1])
-            i = 0
-            while i < len(shifts) - 1:
-                if (shifts[i][0] == 'Shift-In' and
-                    shifts[i + 1][0] == 'Shift-Out' and
-                    shifts[i][1].date() == shifts[i + 1][1].date()):
-                    total_shift_hours += (shifts[i + 1][1] - shifts[i][1]).seconds / 3600.0
-                    i += 2  # Move to the next pair
-                else:
-                    i += 1  # Move to the next activity
-
+        total_shift_hours = calculate_total_shift_hours(user_activities)
         user_shift_hours[user["username"]] = total_shift_hours
 
-    # Sort users by total shift hours and select top 3
     top_users = sorted(user_shift_hours.items(), key=lambda x: x[1], reverse=True)[:3]
     leaderboard = [{"username": user[0], "hours": user[1]} for user in top_users]
 
-    print(f"Leaderboard: {leaderboard}")
-
-    # Calculate weekly streak for the user
     streak_data = db.execute(
         """
         SELECT 
@@ -165,35 +131,12 @@ def index():
         """
     )
 
-    # Find the current streak for the logged-in user
-    current_streak = 0
-    if streak_data:
-        streaks = {}
-        for record in streak_data:
-            user_id = record['user_id']
-            year = int(record['year'])
-            week = int(record['week'])
-            if user_id not in streaks:
-                streaks[user_id] = []
-            streaks[user_id].append((year, week))
+    current_streak = calculate_current_streak(streak_data, session["user_id"])
 
-        user_streaks = streaks.get(session["user_id"], [])
-        if user_streaks:
-            longest_streak = 1
-            current_streak = 1
-            for i in range(1, len(user_streaks)):
-                prev_year, prev_week = user_streaks[i-1]
-                curr_year, curr_week = user_streaks[i]
-                if (curr_year == prev_year and curr_week == prev_week + 1) or (curr_year == prev_year + 1 and prev_week == 52 and curr_week == 0):
-                    current_streak += 1
-                    longest_streak = max(longest_streak, current_streak)
-                else:
-                    current_streak = 1
-
-            current_streak = longest_streak
-
-    return render_template("index.html", activities_shown=activities_shown, activities=activities, shift_percentage=shift_percentage, leaderboard=leaderboard, current_streak=current_streak, usernames_shift_in=usernames_shift_in)
-
+    return render_template("index.html", activities_shown=activities_shown, activities=activities, 
+                           shift_percentage=shift_percentage, leaderboard=leaderboard, 
+                           current_streak=current_streak, badge_class=badge_class,
+                           usernames_shift_in=usernames_shift_in)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -234,6 +177,7 @@ def login():
     else:
         return render_template("login.html")
 
+
 @app.route("/logout")
 def logout():
     """Log user out"""
@@ -243,6 +187,7 @@ def logout():
 
     # Redirect user to login form
     return redirect("/")
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -309,6 +254,7 @@ def attendance():
     else:
         return render_template("attendance.html")
     
+
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
     if request.method == "POST":
@@ -390,10 +336,43 @@ def admin():
         return render_template("admin.html", user_data=user_data, week_labels=reversed(week_labels))
 
 
+@app.route("/change_password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    if request.method == "POST":
+        # Get form data
+        username = request.form.get("username")
+        new_password = request.form.get("new_password")
+        confirmation = request.form.get("confirmation")
+
+        # Ensure the username is correct
+        user = db.execute("SELECT * FROM users WHERE username = ?", username)
+        if not user:
+            flash("Username not found.")
+            return redirect("/change_password")
+
+        # Ensure new password and confirmation match
+        if new_password != confirmation:
+            flash("Passwords do not match.")
+            return redirect("/change_password")
+
+        # Hash the new password
+        hash = generate_password_hash(new_password)
+
+        # Update the password in the database
+        db.execute("UPDATE users SET hash = ? WHERE username = ?", hash, username)
+
+        flash("Password successfully updated!")
+        return redirect("/")
+
+    # If GET request, render the change password form
+    return render_template("change_password.html")
+
 
 @app.errorhandler(404)
 def not_found_error(error):
     return apology("Page doesn't exist.", 404)
-    
+
+
 if __name__ == "__main__":
     app.run(debug=True)

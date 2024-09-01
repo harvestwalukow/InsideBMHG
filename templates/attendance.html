@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block main %}
+    <!-- Form absen -->
     <form id="attendanceForm" action="/attendance" method="post" onsubmit="return validateLocation()">
         <div class="mb-3 custom-select">
             <select class="form-control mx-auto w-auto" id="symbol" name="symbol">
@@ -22,6 +23,7 @@
         <button type="submit" class="btn btn-primary">Submit</button>
     </form>
 
+    <!-- Validasi lokasi -->
     <script>
         function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
             var R = 6371000; // Radius of the Earth in meters
