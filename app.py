@@ -194,6 +194,10 @@ def register():
     """Register user"""
     session.clear()
 
+    # Disable sementara
+    if True:
+        return apology("currently unavailable", "403")
+
     if request.method == "POST":
         if not request.form.get("username"):
             return apology("must provide username", 400)
@@ -346,9 +350,10 @@ def change_password():
         confirmation = request.form.get("confirmation")
 
         # Ensure the username is correct
-        user = db.execute("SELECT * FROM users WHERE username = ?", username)
-        if not user:
-            flash("Username not found.")
+        session_user_id = session.get("user_id")
+        user = db.execute("SELECT * FROM users WHERE id = ?", session_user_id)
+        if not user or username != user[0]["username"]:
+            flash("Username not found or it's not yours")
             return redirect("/change_password")
 
         # Ensure new password and confirmation match
