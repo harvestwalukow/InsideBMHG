@@ -1,4 +1,4 @@
 .env
 bmhg.db
-./__pycache__
-./flask_session
+__pycache__/
+flask_session/
